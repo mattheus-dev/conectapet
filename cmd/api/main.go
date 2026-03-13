@@ -41,6 +41,10 @@ func main() {
 		api.POST("/pets", petHandler.CreatePet)
 		api.GET("/pets/:id", petHandler.GetPet)
 		api.PATCH("/pets/:id/status", petHandler.UpdatePetStatus)
+		api.DELETE("/pets/:id", petHandler.DeletePet)
+
+		// Admin
+		api.GET("/admin/pets", petHandler.ListAllPets)
 
 		// Adoções
 		// POST  /api/adopt              → abre solicitação de adoção

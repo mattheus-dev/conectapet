@@ -44,6 +44,32 @@ func (h *PetHandler) ListAvailablePets(c *gin.Context) {
 	})
 }
 
+// ListAllPets godoc
+// GET /api/admin/pets
+// Retorna TODOS os pets sem filtro de status. Uso exclusivo do painel admin.
+func (h *PetHandler) ListAllPets(c *gin.Context) {
+	var pets []models.Pet
+
+	query := h.db.Model(&models.Pet{})
+
+	if especie := c.Query("especie"); especie != "" {
+		query = query.Where("species = ?", especie)
+	}
+
+	if err := query.Order("created_at desc").Find(&pets).Error; err != nil {
+		respondError(c, apiError{
+			Code:    http.StatusInternalServerError,
+			Message: "erro ao buscar pets",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":  pets,
+		"total": len(pets),
+	})
+}
+
 // CreatePet godoc
 // POST /api/pets
 // Cadastra um novo pet. Campos obrigatórios: nome, especie.
@@ -116,4 +142,27 @@ func (h *PetHandler) UpdatePetStatus(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, pet)
+}
+
+// DeletePet godoc
+// DELETE /api/pets/:id
+// Remove um pet do sistema via soft delete (campo deleted_at).
+func (h *PetHandler) DeletePet(c *gin.Context) {
+	id := c.Param("id")
+
+	var pet models.Pet
+	if err := h.db.First(&pet, id).Error; err != nil {
+		respondError(c, dbError(err, "pet não encontrado"))
+		return
+	}
+
+	if err := h.db.Delete(&pet).Error; err != nil {
+		respondError(c, apiError{
+			Code:    http.StatusInternalServerError,
+			Message: "erro ao remover o pet",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "pet removido com sucesso"})
 }
