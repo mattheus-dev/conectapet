@@ -28,6 +28,7 @@ func Migrate(db *gorm.DB) error {
 	if err := db.AutoMigrate(
 		&models.Pet{},
 		&models.Adoption{},
+		&models.User{},
 	); err != nil {
 		return fmt.Errorf("falha no AutoMigrate: %w", err)
 	}

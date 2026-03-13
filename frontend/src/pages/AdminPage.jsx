@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Toast from '../components/Toast'
 import { API_URL } from '../lib/api'
+import { authHeaders, clearAuth } from '../lib/auth'
 
 const EMPTY_FORM = {
   nome: '',
@@ -57,20 +59,30 @@ export default function AdminPage() {
   const [submitting, setSubmitting] = useState(false)
   const [toast, setToast] = useState(null)
 
+  const navigate = useNavigate()
   const showToast = (type, message) => setToast({ type, message })
+
+  function handleUnauthorized() {
+    clearAuth()
+    navigate('/login', { replace: true })
+  }
 
   const fetchData = useCallback(() => {
     setLoading(true)
     Promise.all([
-      fetch(`${API_URL}/admin/pets`).then((r) => r.json()),
-      fetch(`${API_URL}/adoptions?status=Pendente`).then((r) => r.json()),
+      fetch(`${API_URL}/admin/pets`, { headers: authHeaders() }).then((r) => {
+        if (r.status === 401) { handleUnauthorized(); throw new Error('não autorizado') }
+        return r.json()
+      }),
+      fetch(`${API_URL}/adoptions?status=Pendente`, { headers: authHeaders() }).then((r) => r.json()),
     ])
       .then(([petsData, adoptionsData]) => {
         setPets(petsData.data ?? [])
         setPendingCount(adoptionsData.total ?? 0)
       })
-      .catch(() => showToast('error', 'Erro ao carregar os dados do painel.'))
+      .catch((err) => { if (err.message !== 'não autorizado') showToast('error', 'Erro ao carregar os dados do painel.') })
       .finally(() => setLoading(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -104,7 +116,7 @@ export default function AdminPage() {
     try {
       const res = await fetch(`${API_URL}/pets`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({ ...form, idade: Number(form.idade) }),
       })
       const data = await res.json()
@@ -123,7 +135,7 @@ export default function AdminPage() {
     try {
       const res = await fetch(`${API_URL}/pets/${petId}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({ status: newStatus }),
       })
       if (!res.ok) throw new Error('Erro ao atualizar o status')
@@ -137,7 +149,7 @@ export default function AdminPage() {
   async function handleDelete(pet) {
     if (!window.confirm(`Tem certeza que deseja remover "${pet.nome}"?`)) return
     try {
-      const res = await fetch(`${API_URL}/pets/${pet.ID}`, { method: 'DELETE' })
+      const res = await fetch(`${API_URL}/pets/${pet.ID}`, { method: 'DELETE', headers: authHeaders() })
       if (!res.ok) throw new Error('Erro ao remover o pet')
       setPets((prev) => prev.filter((p) => p.ID !== pet.ID))
       showToast('success', `${pet.nome} foi removido com sucesso.`)

@@ -20,41 +20,47 @@ func main() {
 		log.Fatalf("Erro na migração do banco de dados: %v", err)
 	}
 
+	if err := database.SeedAdmin(db); err != nil {
+		log.Fatalf("Erro ao criar usuário admin: %v", err)
+	}
+
 	router := gin.New()
 	router.Use(gin.Recovery())
 	router.Use(middleware.CORS())
 	router.Use(middleware.RequestLogger())
 
-	router.GET("/ping", handlers.Ping)
-
+	// ── Handlers ────────────────────────────────────────────────
 	petHandler := handlers.NewPetHandler(db)
 	adoptionHandler := handlers.NewAdoptionHandler(db)
+	authHandler := handlers.NewAuthHandler(db)
 
-	api := router.Group("/api")
+	// ── Rotas públicas ──────────────────────────────────────────
+	router.GET("/ping", handlers.Ping)
+
+	public := router.Group("/api")
 	{
-		// Pets
-		// GET  /api/pets         → lista pets com status Disponível
-		// POST /api/pets         → cadastra novo pet
-		// GET  /api/pets/:id     → detalha um pet
-		// PATCH /api/pets/:id/status → atualiza status do pet
-		api.GET("/pets", petHandler.ListAvailablePets)
-		api.POST("/pets", petHandler.CreatePet)
-		api.GET("/pets/:id", petHandler.GetPet)
-		api.PATCH("/pets/:id/status", petHandler.UpdatePetStatus)
-		api.DELETE("/pets/:id", petHandler.DeletePet)
+		public.POST("/auth/login", authHandler.Login)
 
-		// Admin
-		api.GET("/admin/pets", petHandler.ListAllPets)
+		// Qualquer visitante pode ver pets disponíveis e enviar pedido de adoção
+		public.GET("/pets", petHandler.ListAvailablePets)
+		public.GET("/pets/:id", petHandler.GetPet)
+		public.POST("/adopt", adoptionHandler.Adopt)
+	}
 
-		// Adoções
-		// POST  /api/adopt              → abre solicitação de adoção
-		// GET   /api/adoptions          → lista solicitações (filtro: ?status=)
-		// GET   /api/adoptions/:id      → detalha solicitação
-		// PATCH /api/adoptions/:id/status → aprova ou rejeita adoção
-		api.POST("/adopt", adoptionHandler.Adopt)
-		api.GET("/adoptions", adoptionHandler.ListAdoptions)
-		api.GET("/adoptions/:id", adoptionHandler.GetAdoption)
-		api.PATCH("/adoptions/:id/status", adoptionHandler.UpdateAdoptionStatus)
+	// ── Rotas protegidas (exigem JWT) ───────────────────────────
+	admin := router.Group("/api")
+	admin.Use(middleware.JWTAuth())
+	{
+		// Gestão de pets
+		admin.POST("/pets", petHandler.CreatePet)
+		admin.PATCH("/pets/:id/status", petHandler.UpdatePetStatus)
+		admin.DELETE("/pets/:id", petHandler.DeletePet)
+		admin.GET("/admin/pets", petHandler.ListAllPets)
+
+		// Gestão de adoções
+		admin.GET("/adoptions", adoptionHandler.ListAdoptions)
+		admin.GET("/adoptions/:id", adoptionHandler.GetAdoption)
+		admin.PATCH("/adoptions/:id/status", adoptionHandler.UpdateAdoptionStatus)
 	}
 
 	log.Println("ConectaPet API rodando na porta :8080")
