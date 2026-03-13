@@ -16,12 +16,6 @@ import (
 //	ADMIN_USERNAME (padrão: "admin")
 //	ADMIN_PASSWORD (padrão: "admin123")
 func SeedAdmin(db *gorm.DB) error {
-	var count int64
-	db.Model(&models.User{}).Count(&count)
-	if count > 0 {
-		return nil
-	}
-
 	username := os.Getenv("ADMIN_USERNAME")
 	if username == "" {
 		username = "admin"
@@ -37,16 +31,27 @@ func SeedAdmin(db *gorm.DB) error {
 		return err
 	}
 
-	admin := models.User{
-		Username: username,
-		Password: string(hash),
-		Role:     "admin",
+	var user models.User
+	result := db.Where("username = ?", username).First(&user)
+
+	if result.Error != nil {
+		// Usuário não existe, criar
+		admin := models.User{
+			Username: username,
+			Password: string(hash),
+			Role:     "admin",
+		}
+		if err := db.Create(&admin).Error; err != nil {
+			return err
+		}
+		log.Printf("Usuário admin criado — login: %s", username)
+	} else {
+		// Usuário existe, atualizar senha
+		if err := db.Model(&user).Update("password", string(hash)).Error; err != nil {
+			return err
+		}
+		log.Printf("Senha do usuário admin atualizada — login: %s", username)
 	}
 
-	if err := db.Create(&admin).Error; err != nil {
-		return err
-	}
-
-	log.Printf("Usuário admin criado — login: %s | Altere a senha em produção!", username)
 	return nil
 }
