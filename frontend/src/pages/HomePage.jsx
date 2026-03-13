@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import PetCard from '../components/PetCard'
 import PetCardSkeleton from '../components/PetCardSkeleton'
+import AdoptionModal from '../components/AdoptionModal'
 import { API_URL } from '../lib/api'
 
 const FILTERS = ['Todos', 'Cachorro', 'Gato', 'Outro']
@@ -10,6 +11,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [activeFilter, setActiveFilter] = useState('Todos')
+  const [adoptingPet, setAdoptingPet] = useState(null)
 
   useEffect(() => {
     setLoading(true)
@@ -28,12 +30,11 @@ export default function HomePage() {
   const filteredPets =
     activeFilter === 'Todos' ? pets : pets.filter((p) => p.especie === activeFilter)
 
-  function handleAdopt(pet) {
-    alert(`🐾 Você quer adotar ${pet.nome}!\nID do pet: ${pet.ID}`)
-  }
-
   return (
     <>
+      {adoptingPet && (
+        <AdoptionModal pet={adoptingPet} onClose={() => setAdoptingPet(null)} />
+      )}
       {/* Hero */}
       <div className="bg-gradient-to-r from-emerald-600 to-teal-500 text-white">
         <div className="max-w-6xl mx-auto px-4 py-10 sm:py-14 text-center">
@@ -104,7 +105,7 @@ export default function HomePage() {
             {filteredPets.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                 {filteredPets.map((pet) => (
-                  <PetCard key={pet.ID} pet={pet} onAdopt={handleAdopt} />
+                  <PetCard key={pet.ID} pet={pet} onAdopt={setAdoptingPet} />
                 ))}
               </div>
             ) : (
