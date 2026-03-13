@@ -249,7 +249,7 @@ export default function AdminPage() {
                 <img
                   src={form.url_imagem}
                   alt="Pré-visualização"
-                  className="mt-2 rounded-xl h-32 w-full object-cover border border-gray-200 bg-gray-50"
+                  className="mt-2 rounded-xl h-32 w-full object-cover object-top border border-gray-200 bg-gray-50"
                   onError={(e) => (e.target.style.display = 'none')}
                   onLoad={(e) => (e.target.style.display = 'block')}
                 />
@@ -316,7 +316,7 @@ export default function AdminPage() {
                           <img
                             src={pet.url_imagem || ''}
                             alt={pet.nome}
-                            className="w-10 h-10 rounded-xl object-cover flex-shrink-0 bg-gray-100 border border-gray-200"
+                            className="w-10 h-10 rounded-xl object-cover object-top flex-shrink-0 bg-gray-100 border border-gray-200"
                             onError={(e) => {
                               e.target.style.display = 'none'
                               e.target.nextSibling.style.display = 'flex'

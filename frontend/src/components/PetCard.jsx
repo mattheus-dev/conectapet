@@ -34,7 +34,7 @@ export default function PetCard({ pet, onAdopt }) {
         <img
           src={imageUrl}
           alt={`Foto de ${pet.nome}`}
-          className="w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover object-top"
           onError={(e) => {
             e.target.src = PLACEHOLDER_IMAGES[pet.especie] ?? PLACEHOLDER_IMAGES['Outro']
           }}
