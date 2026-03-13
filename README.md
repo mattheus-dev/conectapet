@@ -6,7 +6,8 @@ Sistema completo de adoção de animais com **API REST em Go** e **frontend em R
 ![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react)
 ![Vite](https://img.shields.io/badge/Vite-7-646CFF?style=flat-square&logo=vite)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=flat-square&logo=tailwindcss)
-![SQLite](https://img.shields.io/badge/SQLite-GORM-003B57?style=flat-square&logo=sqlite)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-GORM-4169E1?style=flat-square&logo=postgresql)
+![SQLite](https://img.shields.io/badge/SQLite-local-003B57?style=flat-square&logo=sqlite)
 
 ---
 
@@ -188,3 +189,67 @@ A API retorna erros estruturados com detalhamento por campo:
 | `404` | Pet ou adoção não encontrado |
 | `409` | Pet não está disponível para adoção |
 | `500` | Erro interno no servidor |
+
+---
+
+## Deploy Gratuito
+
+### Stack de produção recomendada
+
+| Parte | Plataforma | Plano gratuito |
+|-------|-----------|----------------|
+| Frontend | [Vercel](https://vercel.com) | Sites ilimitados, CDN global |
+| Backend | [Render](https://render.com) | 750h/mês, HTTPS automático |
+| Banco de dados | [Neon](https://neon.tech) | PostgreSQL serverless, 512MB |
+
+O projeto detecta automaticamente o ambiente:
+- **`DATABASE_URL` vazia** → usa SQLite local (`conectapet.db`)
+- **`DATABASE_URL=postgres://...`** → usa PostgreSQL (produção)
+
+### 1. Banco de dados — Neon
+
+1. Crie conta em [neon.tech](https://neon.tech) → **New Project**
+2. Copie a **Connection String** (formato `postgres://user:pass@host/db?sslmode=require`)
+3. Guarde para usar nas variáveis do Render
+
+### 2. Backend — Render
+
+1. Crie conta em [render.com](https://render.com) → **New Web Service**
+2. Conecte o repositório `mattheus-dev/conectapet`
+3. Configure:
+   - **Root Directory:** *(deixe vazio — raiz do repo)*
+   - **Build Command:** `go build -o api ./cmd/api/main.go`
+   - **Start Command:** `./api`
+4. Adicione as variáveis de ambiente:
+
+| Variável | Valor |
+|----------|-------|
+| `DATABASE_URL` | Connection string do Neon |
+| `JWT_SECRET` | String longa e aleatória |
+| `ADMIN_USERNAME` | Seu usuário admin |
+| `ADMIN_PASSWORD` | Sua senha admin |
+| `FRONTEND_URL` | `https://seu-projeto.vercel.app` |
+| `GIN_MODE` | `release` |
+
+### 3. Frontend — Vercel
+
+1. Crie conta em [vercel.com](https://vercel.com) → **Add New Project**
+2. Importe o repositório `mattheus-dev/conectapet`
+3. Configure:
+   - **Root Directory:** `frontend`
+   - **Framework Preset:** Vite *(detectado automaticamente)*
+4. Adicione a variável de ambiente:
+
+| Variável | Valor |
+|----------|-------|
+| `VITE_API_URL` | `https://conectapet-api.onrender.com/api` |
+
+### Variáveis de ambiente locais
+
+Copie `.env.example` para `.env` e preencha os valores:
+
+```bash
+cp .env.example .env
+```
+
+> **⚠️ Nunca commite o arquivo `.env`** — ele está no `.gitignore`.

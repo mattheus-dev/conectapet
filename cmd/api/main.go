@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"conectapet/internal/database"
 	"conectapet/internal/handlers"
@@ -11,7 +12,14 @@ import (
 )
 
 func main() {
-	db, err := database.Connect("conectapet.db")
+	// Em produção: DATABASE_URL=postgres://user:pass@host/db
+	// Em desenvolvimento local: usa SQLite (conectapet.db)
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		dsn = "conectapet.db"
+	}
+
+	db, err := database.Connect(dsn)
 	if err != nil {
 		log.Fatalf("Erro ao conectar ao banco de dados: %v", err)
 	}
@@ -22,6 +30,11 @@ func main() {
 
 	if err := database.SeedAdmin(db); err != nil {
 		log.Fatalf("Erro ao criar usuário admin: %v", err)
+	}
+
+	// Em produção (Render), o Gin deve rodar em modo release
+	if os.Getenv("GIN_MODE") == "" && os.Getenv("RENDER") != "" {
+		gin.SetMode(gin.ReleaseMode)
 	}
 
 	router := gin.New()
@@ -40,8 +53,6 @@ func main() {
 	public := router.Group("/api")
 	{
 		public.POST("/auth/login", authHandler.Login)
-
-		// Qualquer visitante pode ver pets disponíveis e enviar pedido de adoção
 		public.GET("/pets", petHandler.ListAvailablePets)
 		public.GET("/pets/:id", petHandler.GetPet)
 		public.POST("/adopt", adoptionHandler.Adopt)
@@ -51,20 +62,24 @@ func main() {
 	admin := router.Group("/api")
 	admin.Use(middleware.JWTAuth())
 	{
-		// Gestão de pets
 		admin.POST("/pets", petHandler.CreatePet)
 		admin.PATCH("/pets/:id/status", petHandler.UpdatePetStatus)
 		admin.DELETE("/pets/:id", petHandler.DeletePet)
 		admin.GET("/admin/pets", petHandler.ListAllPets)
 
-		// Gestão de adoções
 		admin.GET("/adoptions", adoptionHandler.ListAdoptions)
 		admin.GET("/adoptions/:id", adoptionHandler.GetAdoption)
 		admin.PATCH("/adoptions/:id/status", adoptionHandler.UpdateAdoptionStatus)
 	}
 
-	log.Println("ConectaPet API rodando na porta :8080")
-	if err := router.Run(":8080"); err != nil {
+	// Render injeta a variável PORT; fallback para 8080 localmente
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	log.Printf("ConectaPet API rodando na porta :%s", port)
+	if err := router.Run(":" + port); err != nil {
 		log.Fatalf("Falha ao iniciar o servidor: %v", err)
 	}
 }

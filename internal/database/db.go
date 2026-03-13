@@ -3,16 +3,31 @@ package database
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"conectapet/internal/models"
 
+	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
+// Connect abre a conexão com o banco de dados.
+// Se o DSN começar com "postgres://" ou "postgresql://", usa PostgreSQL (produção).
+// Caso contrário, usa SQLite (desenvolvimento local).
 func Connect(dsn string) (*gorm.DB, error) {
-	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
+	var dialector gorm.Dialector
+
+	if strings.HasPrefix(dsn, "postgres://") || strings.HasPrefix(dsn, "postgresql://") {
+		log.Println("Conectando ao PostgreSQL...")
+		dialector = postgres.Open(dsn)
+	} else {
+		log.Println("Conectando ao SQLite (local)...")
+		dialector = sqlite.Open(dsn)
+	}
+
+	db, err := gorm.Open(dialector, &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),
 	})
 	if err != nil {
