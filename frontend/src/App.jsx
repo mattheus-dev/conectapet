@@ -1,0 +1,143 @@
+import { useState, useEffect } from 'react'
+import PetCard from './components/PetCard'
+import PetCardSkeleton from './components/PetCardSkeleton'
+
+const API_URL = 'http://localhost:8080/api'
+
+const FILTERS = ['Todos', 'Cachorro', 'Gato', 'Outro']
+
+export default function App() {
+  const [pets, setPets] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [activeFilter, setActiveFilter] = useState('Todos')
+
+  useEffect(() => {
+    setLoading(true)
+    setError(null)
+
+    fetch(`${API_URL}/pets`)
+      .then((res) => {
+        if (!res.ok) throw new Error(`Erro ${res.status}: falha ao carregar os pets`)
+        return res.json()
+      })
+      .then((data) => setPets(data.data ?? []))
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const filteredPets =
+    activeFilter === 'Todos'
+      ? pets
+      : pets.filter((p) => p.especie === activeFilter)
+
+  function handleAdopt(pet) {
+    alert(`🐾 Você quer adotar ${pet.nome}!\nID do pet: ${pet.ID}`)
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Header */}
+      <header className="bg-gradient-to-r from-emerald-600 to-teal-500 text-white">
+        <div className="max-w-6xl mx-auto px-4 py-10 sm:py-14 text-center">
+          <div className="text-5xl mb-3">🐾</div>
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">ConectaPet</h1>
+          <p className="mt-2 text-emerald-100 text-base sm:text-lg max-w-xl mx-auto">
+            Encontre seu novo melhor amigo e dê a ele um lar cheio de amor.
+          </p>
+        </div>
+      </header>
+
+      {/* Conteúdo principal */}
+      <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-8">
+        {/* Filtros */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          {FILTERS.map((filter) => (
+            <button
+              key={filter}
+              onClick={() => setActiveFilter(filter)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors duration-150 cursor-pointer border ${
+                activeFilter === filter
+                  ? 'bg-emerald-500 text-white border-emerald-500'
+                  : 'bg-white text-gray-600 border-gray-200 hover:border-emerald-400 hover:text-emerald-600'
+              }`}
+            >
+              {filter === 'Cachorro' && '🐶 '}
+              {filter === 'Gato' && '🐱 '}
+              {filter === 'Outro' && '🐾 '}
+              {filter === 'Todos' && '✨ '}
+              {filter}
+            </button>
+          ))}
+        </div>
+
+        {/* Estado de erro */}
+        {error && (
+          <div className="rounded-2xl bg-red-50 border border-red-200 p-6 text-center">
+            <div className="text-3xl mb-2">😕</div>
+            <h2 className="text-lg font-semibold text-red-700">Ops! Algo deu errado</h2>
+            <p className="text-sm text-red-500 mt-1">{error}</p>
+            <p className="text-xs text-gray-400 mt-2">
+              Verifique se o servidor está rodando em{' '}
+              <code className="bg-gray-100 px-1 rounded">localhost:8080</code>
+            </p>
+          </div>
+        )}
+
+        {/* Estado de loading — skeletons */}
+        {loading && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <PetCardSkeleton key={i} />
+            ))}
+          </div>
+        )}
+
+        {/* Lista de pets */}
+        {!loading && !error && (
+          <>
+            <p className="text-sm text-gray-500 mb-4">
+              {filteredPets.length === 0
+                ? 'Nenhum pet encontrado.'
+                : `${filteredPets.length} pet${filteredPets.length > 1 ? 's' : ''} disponíve${filteredPets.length > 1 ? 'is' : 'l'}`}
+            </p>
+
+            {filteredPets.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                {filteredPets.map((pet) => (
+                  <PetCard key={pet.ID} pet={pet} onAdopt={handleAdopt} />
+                ))}
+              </div>
+            ) : (
+              /* Estado vazio */
+              <div className="text-center py-20">
+                <div className="text-5xl mb-4">🔍</div>
+                <h2 className="text-xl font-semibold text-gray-700">Nenhum pet encontrado</h2>
+                <p className="text-gray-400 mt-1 text-sm">
+                  {activeFilter !== 'Todos'
+                    ? `Não há pets da espécie "${activeFilter}" disponíveis no momento.`
+                    : 'Nenhum pet disponível para adoção no momento.'}
+                </p>
+                {activeFilter !== 'Todos' && (
+                  <button
+                    onClick={() => setActiveFilter('Todos')}
+                    className="mt-4 text-sm text-emerald-600 hover:underline cursor-pointer"
+                  >
+                    Ver todos os pets →
+                  </button>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t border-gray-200 bg-white mt-auto">
+        <div className="max-w-6xl mx-auto px-4 py-6 text-center text-sm text-gray-400">
+          Feito com ❤️ pelo ConectaPet · {new Date().getFullYear()}
+        </div>
+      </footer>
+    </div>
+  )
+}
